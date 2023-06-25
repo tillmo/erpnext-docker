@@ -1,0 +1,37 @@
+- name: Update working copy discarding all modified files
+  git:
+    repo: "{{ repo }}"
+    version: "{{ repo_version }}"
+    dest: "{{ composeFolder }}"
+    force: yes
+
+- name: Upload .env
+  template:
+    src: env.j2
+    dest: "{{ composeFolder }}/.env"
+
+- name: Upload other files to the server
+  synchronize:
+    src: installation/
+    dest: "{{ composeFolder }}/installation/"
+    owner: no
+    group: no
+    rsync_opts:
+      - "--omit-dir-times"
+
+- name: Pull images
+  command: docker-compose -f installation/docker-compose-common.yml -f installation/docker-compose-erpnext.yml -f installation/docker-compose-networks.yml pull 
+  args:
+    chdir: "{{ composeFolder }}"
+  register: result
+  changed_when: '"status: downloaded newer image" in result.stderr'
+
+- name: Start ERPNext
+  command: docker-compose --project-name {{ composeProject }} -f installation/docker-compose-common.yml -f installation/docker-compose-erpnext.yml -f installation/docker-compose-networks.yml up -d
+  args:
+    chdir: "{{ composeFolder }}"
+  register: result
+  changed_when: '"Creating" in result.stderr or "Recreating" in result.stderr'
+
+- name: Migrate sites after update
+  command: docker run --rm -e "MAINTENANCE_MODE=1" -v {{ composeProject }}_sites-vol:/home/frappe/frappe-bench/sites --network proxy-tier frappe/erpnext-worker:{{ erpnext_version }} migrate

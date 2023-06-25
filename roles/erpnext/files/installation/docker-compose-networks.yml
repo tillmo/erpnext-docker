@@ -1,0 +1,11 @@
+# based on https://github.com/frappe/frappe_docker/blob/develop/installation/docker-compose-networks.yml
+# changes:
+# * separate (internal) default network and (external) proxy network
+# * make name of proxy network configurable
+version: '3'
+
+networks:
+  default:
+  proxy:
+    external:
+      name: ${PROXY_NETWORK:-webproxy}

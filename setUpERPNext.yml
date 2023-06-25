@@ -1,0 +1,13 @@
+- name: Set up ERPNext
+  hosts: all
+  vars:
+    domain: myserver.de
+    composeProject: erpnext
+    composeFolder: "{{ ansible_user_dir }}/.cache/{{ composeProject }}"
+    repo: "https://github.com/frappe/frappe_docker"
+    # 2021-02-03
+    repo_version: 4bbc8c41cf26771cf7e91925e1191dbcf0abde1b
+    erpnext_version: v13.16.1
+    frappe_version: v13.16.0
+  roles:
+    - erpnext

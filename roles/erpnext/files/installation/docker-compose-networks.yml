@@ -7,5 +7,15 @@ version: '3'
 networks:
   default:
   proxy:
-    external:
-      name: ${PROXY_NETWORK:-webproxy}
+    name: ${PROXY_NETWORK:-webproxy}
+
+services:
+  frontend:
+    environment:
+      - VIRTUAL_HOST=${SITES}
+      - LETSENCRYPT_HOST=${SITES}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+    networks:
+      - default
+      - proxy
+      

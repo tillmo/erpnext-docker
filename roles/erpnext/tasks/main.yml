@@ -20,18 +20,18 @@
       - "--omit-dir-times"
 
 - name: Pull images
-  command: docker-compose -f installation/docker-compose-common.yml -f installation/docker-compose-erpnext.yml -f installation/docker-compose-networks.yml pull 
+  command: docker compose -f compose.yaml -f installation/compose.https.yaml -f overrides/compose.redis.yaml -f overrides/compose.mariadb.yaml pull --quiet
   args:
     chdir: "{{ composeFolder }}"
   register: result
   changed_when: '"status: downloaded newer image" in result.stderr'
-
+       
 - name: Start ERPNext
-  command: docker-compose --project-name {{ composeProject }} -f installation/docker-compose-common.yml -f installation/docker-compose-erpnext.yml -f installation/docker-compose-networks.yml up -d
+  command: docker compose --project-name {{ composeProject }} -f compose.yaml -f installation/compose.https.yaml -f overrides/compose.redis.yaml -f overrides/compose.mariadb.yaml up -d
   args:
     chdir: "{{ composeFolder }}"
   register: result
   changed_when: '"Creating" in result.stderr or "Recreating" in result.stderr'
 
-- name: Migrate sites after update
-  command: docker run --rm -e "MAINTENANCE_MODE=1" -v {{ composeProject }}_sites-vol:/home/frappe/frappe-bench/sites --network proxy-tier frappe/erpnext-worker:{{ erpnext_version }} migrate
+# - name: Migrate sites after update
+#  command: docker run --rm -e "MAINTENANCE_MODE=1" -v {{ composeProject }}_sites-vol:/home/frappe/frappe-bench/sites --network proxy-tier frappe/erpnext-worker:{{ erpnext_version }} migrate

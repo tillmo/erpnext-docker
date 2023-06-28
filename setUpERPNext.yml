@@ -1,7 +1,7 @@
 - name: Set up ERPNext
   hosts: all
   vars:
-    domain: myserver.de
+    domain: dewi.communtu.org
     composeProject: erpnext
     composeFolder: "{{ ansible_user_dir }}/.cache/{{ composeProject }}"
     repo: "https://github.com/frappe/frappe_docker"

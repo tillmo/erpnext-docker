@@ -1,4 +1,4 @@
 localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3
 
 [erpnext]
-myserver.de ansible_user=docker ansible_python_interpreter=/usr/bin/python3
+dewi.communtu.org ansible_user=docker ansible_python_interpreter=/usr/bin/python3

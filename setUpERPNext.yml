@@ -6,7 +6,7 @@
     composeFolder: "{{ ansible_user_dir }}/.cache/{{ composeProject }}"
     repo: "https://github.com/frappe/frappe_docker"
     # 2023-03-22 / ERPNext v14.19.0
-    repo_version: 786c5d19d261ea9068c3069161f523ab577fcf1b
-    erpnext_version: v14.19.0 
+    repo_version: ce272a9   # 786c5d19d261ea9068c3069161f523ab577fcf1b
+    erpnext_version: v13.52.0 # v14.40.0 
   roles:
     - erpnext

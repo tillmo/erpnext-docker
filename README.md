@@ -22,7 +22,7 @@ source .env
     -e "INSTALL_APPS=erpnext" \
     -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites \
     --network ${PROJECT_NAME}_default \
-    frappe/erpnext-worker:${ERPNEXT_VERSION} new
+    frappe/erpnext:${ERPNEXT_VERSION} new
 ```
 
 ## Restore backup
@@ -33,7 +33,7 @@ The following command automatically restores the most recent backup that can be 
 ```
 cd ~/.cache/<deployment>
 source .env
-docker run --rm -e "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites -v /home/docker/erpnext/backups/${SITES}:/home/frappe/backups/${SITES} --network ${PROJECT_NAME}_default frappe/erpnext-worker:${ERPNEXT_VERSION} restore-backup
+docker run --rm -e "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites -v /home/docker/erpnext/backups/${SITES}:/home/frappe/backups/${SITES} --network ${PROJECT_NAME}_default frappe/erpnext:${ERPNEXT_VERSION} restore-backup
 ```
 
 The script looks for backups matching the installed site(s).
@@ -54,10 +54,10 @@ Note: The bench command `remove-from-installed-apps` doesn't work because it ign
 ```
 cd ~/.cache/<deployment>
 source .env
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext-worker:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup journeys
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext-worker:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup erpnext_support
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext-worker:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup pibiapp
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext-worker:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup erpnextfints
+docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup journeys
+docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup erpnext_support
+docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup pibiapp
+docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup erpnextfints
 ```
 
 ## Migrate (e.g. after restoring older backup)
@@ -65,7 +65,7 @@ docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --n
 ```
 cd ~/.cache/<deployment>
 source .env
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext-worker:${ERPNEXT_VERSION} bench --site ${SITES} migrate
+docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} migrate
 ```
 
 ## Maintenance mode
@@ -73,7 +73,7 @@ docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --n
 ```
 cd ~/.cache/<deployment>
 source .env
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext-worker:${ERPNEXT_VERSION} bench --site ${SITES} set-maintenance-mode off
+docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} set-maintenance-mode off
 ```
 
 ## Tear down ERPNext
@@ -97,7 +97,7 @@ If you get the error message
 ```
 ERROR: remove erpnext[...]_sites-vol: volume is in use - [...]
 ```
-then there are still some left-over erpnext-worker containers from `docker run` commands. They
+then there are still some left-over erpnext containers from `docker run` commands. They
 can be removed with
 ```
 docker container prune
@@ -106,7 +106,7 @@ WARNING! This will remove _all_ stopped containers. You should check with `docke
 stopped containers you want to keep. The alternative is to use `docker rm <container> ...` where
 `<container> ...` are either the ids or the names of the containers to remove.
 
-After removing the left-over erpnext-worker containers you can simply run the above `docker-compose`
+After removing the left-over erpnext containers you can simply run the above `docker-compose`
 command again.
 
 ## Restore files

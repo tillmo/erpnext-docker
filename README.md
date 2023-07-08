@@ -11,61 +11,57 @@ ansible-playbook -i hosts -l erpnext -v setUpERPNext.yml
 
 ```
 cd ~/.cache/<deployment>
-source .env
+source .env # todo: handle backquotes
 ## the following command starts with a space to prevent it from ending up in the bash history
 ## (because of the admin password which is here "commented out")
- docker run --rm \
-    -e "SITE_NAME=${SITES}" \
-    -e "DB_ROOT_USER=root" \
-    -e "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" \
-    -e "ADMIN_PASSWORD=*****" \
-    -e "INSTALL_APPS=erpnext" \
-    -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites \
-    --network ${PROJECT_NAME}_default \
-    frappe/erpnext:${ERPNEXT_VERSION} new
+ docker exec ${PROJECT_NAME}-backend-1 bench new-site ${SITES} --db-root-password ${MYSQL_ROOT_PASSWORD} --admin-password <admin-password>
 ```
 
 ## Restore backup
 
-The following command automatically restores the most recent backup that can be found in
+The following script restores the most recent backup that can be found in
 `/home/docker/erpnext/backups`.
 
 ```
+### set variables
 cd ~/.cache/<deployment>
-source .env
-docker run --rm -e "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}" -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites -v /home/docker/erpnext/backups/${SITES}:/home/frappe/backups/${SITES} --network ${PROJECT_NAME}_default frappe/erpnext:${ERPNEXT_VERSION} restore-backup
-```
+source .env # todo: handle backquotes
+DIR=~/erpnext/backups/${SITES}
+SITES_U=${SITES//./_}
+DATE=$(ls ${DIR} |sort |tail -n 1 |cut -d "-" -f 1)
+DIR=${DIR}/${DATE}
 
-The script looks for backups matching the installed site(s).
-For example, for the site `myserver.de` the command looks for "timestamp" folders in
-`/home/docker/erpnext/backups/myserver.de`, e.g.
-`/home/docker/erpnext/backups/myserver.de/20210407_000607`. Inside this folder it expects to
-find the following files:
-```
-20210407_000607-myserver_de-database.sql.gz
-20210407_000607-myserver_de-files.tar
-20210407_000607-myserver_de-private-files.tar
-```
+### rename files to new site (only needed if restore happens across sites)
+OLD_SITE=erpnext.cafesunshine.de
+OLD_SITE_U=${OLD_SITE//./_}
+pushd $DIR
+tar xf ${DATE}-${OLD_SITE_U}-files.tar
+mv $OLD_SITE $SITES
+tar cf ${DATE}-${SITES_U}-files.tar $SITES
+rm -rf $SITES
+tar xf ${DATE}-${OLD_SITE_U}-private-files.tar
+mv $OLD_SITE $SITES
+tar cf ${DATE}-${SITES_U}-private-files.tar $SITES
+rm -rf $SITES
+popd
 
-## Remove missing apps after restoring backup
+### copy files into docker volume and restore db+files
+docker cp ${DIR}/${DATE}-${SITES_U}-database.sql.gz ${PROJECT_NAME}-backend-1:/home/frappe/frappe-bench/sites/
+docker cp ${DIR}/${DATE}-${SITES_U}-files.tar ${PROJECT_NAME}-backend-1:/home/frappe/frappe-bench/sites/
+docker cp ${DIR}/${DATE}-${SITES_U}-private-files.tar ${PROJECT_NAME}-backend-1:/home/frappe/frappe-bench/sites/
+docker exec ${PROJECT_NAME}-backend-1 bench --site ${SITES} restore /home/frappe/frappe-bench/sites/${DATE}-${SITES_U}-database.sql.gz --db-root-password ${MYSQL_ROOT_PASSWORD} --with-public-files /home/frappe/frappe-bench/sites/${DATE}-${SITES_U}-files.tar --with-private-files /home/frappe/frappe-bench/sites/${DATE}-${SITES_U}-private-files.tar
+docker cp ${DIR}/${DATE}-${SITES_U}-site_config_backup.json ${PROJECT_NAME}-backend-1:/home/frappe/frappe-bench/sites/${SITES}/site_config.json
 
-Note: The bench command `remove-from-installed-apps` doesn't work because it ignores apps that are not installed.
+### possibly needed
+docker exec -it ${PROJECT_NAME}-db-1 mysql -u root -p${MYSQL_ROOT_PASSWORD} -e"GRANT ALL PRIVILEGES ON *.* TO '_b2b773e646de5d9f'@'%';"
 
-```
-cd ~/.cache/<deployment>
-source .env
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup journeys
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup erpnext_support
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup pibiapp
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} uninstall-app --yes --force --no-backup erpnextfints
-```
 
 ## Migrate (e.g. after restoring older backup)
 
 ```
 cd ~/.cache/<deployment>
 source .env
-docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} migrate
+docker exec ${PROJECT_NAME}-backend-1 bench --site ${SITES} migrate
 ```
 
 ## Maintenance mode
@@ -76,13 +72,16 @@ source .env
 docker run --rm -v ${PROJECT_NAME}_sites-vol:/home/frappe/frappe-bench/sites --network ${PROJECT_NAME}_default --user frappe frappe/erpnext:${ERPNEXT_VERSION} bench --site ${SITES} set-maintenance-mode off
 ```
 
-## Tear down ERPNext
+## Start and tear down ERPNext
 
 ```
 cd ~/.cache/<deployment>
 source .env
 cd /home/docker/.cache/${PROJECT_NAME}
-docker-compose --project-name ${PROJECT_NAME} -f installation/docker-compose-common.yml -f installation/docker-compose-erpnext.yml -f installation/docker-compose-networks.yml down
+# start
+docker compose --project-name ${PROJECT_NAME} -f compose.yaml -f installation/compose.https.yaml -f overrides/compose.redis.yaml -f overrides/compose.mariadb.yaml up -d
+# tear down
+docker compose --project-name ${PROJECT_NAME} -f compose.yaml -f installation/compose.https.yaml -f overrides/compose.redis.yaml -f overrides/compose.mariadb.yaml down
 ```
 
 ## Also remove all persistent volumes (WARNING! Destroys all data!)
@@ -90,7 +89,7 @@ docker-compose --project-name ${PROJECT_NAME} -f installation/docker-compose-com
 ```
 cd ~/.cache/<deployment>
 source .env
-docker-compose --project-name ${PROJECT_NAME} -f installation/docker-compose-common.yml -f installation/docker-compose-erpnext.yml -f installation/docker-compose-networks.yml down --volumes
+docker compose --project-name ${PROJECT_NAME} -f compose.yaml -f installation/compose.https.yaml -f overrides/compose.redis.yaml -f overrides/compose.mariadb.yaml down --volumes
 ```
 
 If you get the error message
@@ -108,6 +107,12 @@ stopped containers you want to keep. The alternative is to use `docker rm <conta
 
 After removing the left-over erpnext containers you can simply run the above `docker-compose`
 command again.
+
+
+## list docker processes
+
+docker ps --format "table {{.ID}}\t {{.Image}}\t {{.Names}}\t {{.Command}}\t {{.Status}}"
+
 
 ## Restore files
 

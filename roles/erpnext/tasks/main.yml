@@ -20,7 +20,7 @@
       - "--omit-dir-times"
 
 - name: Pull images
-  command: docker compose -f compose.yaml -f installation/compose.https.yaml -f overrides/compose.redis.yaml -f overrides/compose.mariadb.yaml pull --quiet
+  command: docker compose -f compose.yaml -f installation/compose.https.yaml -f overrides/compose.redis.yaml -f overrides/compose.mariadb.yaml pull
   args:
     chdir: "{{ composeFolder }}"
   register: result
